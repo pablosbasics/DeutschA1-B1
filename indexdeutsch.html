@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deutsch A1 → B1 – Mein Lernplan</title>
+<style>
+:root{--bg:#eef4f8;--card:#fff;--text:#1d2630;--muted:#5d6b78;--accent:#2b6cb0;--accent2:#f6ad55;--ok:#2f855a;--bad:#c53030;--line:#8883;--chip:#e6f0fa}
+@media (prefers-color-scheme: dark){:root{--bg:#161b22;--card:#21272f;--text:#e6edf3;--muted:#9aa7b4;--chip:#2a3440;--accent:#4f9ae0}}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.6}
+header{background:linear-gradient(90deg,#2b6cb0,#4c51bf);color:#fff;padding:16px 20px}
+header h1{margin:0;font-size:1.4rem}
+header p{margin:4px 0 0;opacity:.92;font-size:.95rem}
+.wrap{display:grid;grid-template-columns:290px 1fr;gap:16px;max-width:1180px;margin:0 auto;padding:16px}
+@media (max-width:820px){.wrap{grid-template-columns:1fr}}
+.card{background:var(--card);border-radius:14px;padding:20px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.level-h{font-size:.8rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:12px 4px 4px}
+.nav-btn{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;text-align:left;margin:3px 0;padding:9px 12px;border:0;border-radius:10px;background:var(--card);color:var(--text);cursor:pointer;font-size:.92rem}
+.nav-btn.active{outline:2px solid var(--accent)}
+.nav-btn:disabled{opacity:.5;cursor:not-allowed}
+.stars{font-size:.8rem;white-space:nowrap}
+.primary{background:var(--accent);color:#fff;border:0;padding:10px 18px;border-radius:10px;cursor:pointer;font-size:1rem}
+.secondary{background:var(--card);color:var(--text);border:1px solid var(--line);padding:10px 18px;border-radius:10px;cursor:pointer;font-size:1rem}
+.sound{background:none;border:1px solid var(--muted);border-radius:8px;cursor:pointer;padding:1px 8px;margin-left:6px;color:var(--text)}
+table{border-collapse:collapse;margin:8px 0;width:100%}
+td,th{padding:6px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{font-size:.9rem;color:var(--muted)}
+.rule{background:var(--chip);border-left:4px solid var(--accent);padding:10px 14px;border-radius:8px;margin:12px 0}
+.tip{background:#fff7e6;color:#1d2630;border-left:4px solid var(--accent2);padding:10px 14px;border-radius:8px;margin:12px 0}
+@media (prefers-color-scheme: dark){.tip{background:#3a2e1a;color:#f5e6c8}}
+.ex{border-top:1px solid var(--line);padding:14px 0}
+.opts button,.chip{display:inline-block;margin:4px 4px 4px 0;padding:9px 14px;border-radius:10px;border:1px solid var(--line);background:var(--chip);color:var(--text);cursor:pointer;font-size:1rem}
+.opts button{display:block;width:100%;text-align:left;margin:6px 0;background:var(--card)}
+.opts button:disabled,.chip:disabled{cursor:default}
+.opts button.sel,.chip.sel{border:2px solid var(--accent)}
+.ok{background:#c6f6d5!important;color:#22543d!important;border-color:#68d391!important}
+.bad{background:#fed7d7!important;color:#822727!important;border-color:#fc8181!important}
+.answer{min-height:48px;border-bottom:2px dashed var(--line);padding:6px 0;margin:6px 0}
+.bank{min-height:48px;margin:6px 0}
+.match{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.match > div{display:flex;flex-direction:column}
+input[type=text]{padding:10px;font-size:1rem;border-radius:10px;border:1px solid var(--line);width:100%;max-width:320px;background:var(--card);color:var(--text)}
+.fb{margin-top:8px;font-weight:600;min-height:1.4em}
+.fb.ok{background:none;color:var(--ok);border:0}
+.fb.bad{background:none;color:var(--bad);border:0}
+.muted{color:var(--muted)}
+.stats{display:flex;gap:12px;flex-wrap:wrap;margin:8px 0}
+.stat{background:var(--bg);border-radius:10px;padding:10px 14px}
+.stat b{font-size:1.3rem}
+.lockbox{text-align:center;padding:30px}
+h3{margin:18px 0 6px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Deutsch A1 → B1 – Mein Lernplan</h1>
+  <p>Grammatik spielerisch entdecken. Jede Stufe schaltest du frei, wenn du die vorherige geschafft hast.</p>
+</header>
+
+<div class="wrap">
+  <nav id="nav"></nav>
+  <main id="main"></main>
+</div>
+
+<script>
+/* =====================================================================
+   FORTSCHRITT & FREISCHALTUNG
+   ===================================================================== */
+const KEY = 'deutsch-a1-b1-v1';
+const PASS = 70; // Prozent, die man braucht, um die nächste Lektion freizuschalten
+let progress = JSON.parse(localStorage.getItem(KEY) || '{"done":{},"xp":0}');
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(progress)); }catch(e){} }
+function addXP(n){ progress.xp = (progress.xp||0) + n; save(); }
+
+function stars(pct){ return pct>=90 ? '⭐⭐⭐' : pct>=80 ? '⭐⭐' : pct>=PASS ? '⭐' : ''; }
+
+/* Lektion i ist frei, wenn die Lektion davor mindestens PASS % hat */
+function isUnlocked(i){
+  if(i === 0) return true;
+  return (progress.done[LESSONS[i-1].id] || 0) >= PASS;
+}
+
+/* =====================================================================
+   HILFSFUNKTIONEN
+   ===================================================================== */
+// Deutsche Umlaute bleiben erhalten, nur Satzzeichen und Groß-/Kleinschreibung werden ignoriert
+const norm = s => s.trim().toLowerCase().replace(/[^\p{L}\s]/gu,'').replace(/\s+/g,' ').trim();
+
+function say(t){
+  if(!('speechSynthesis' in window)) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(t);
+  u.lang = 'de-DE'; u.rate = 0.9;
+  speechSynthesis.speak(u);
+}
+function shuffle(a){ return [...a].sort(()=>Math.random()-0.5); }
+function btn(text, cls='chip'){ const b=document.createElement('button'); b.className=cls; b.textContent=text; return b; }
+
+/* =====================================================================
+   LEKTIONEN A1
+   ===================================================================== */
+const CONTENT = [
+{
+  id:'a1-1', level:'A1', title:'1. sein & haben', goal:'Die wichtigsten Verben im Präsens',
+  explain:`
+  <p>Die zwei wichtigsten Verben im Deutschen sind <b>sein</b> (sein) und <b>haben</b> (haben). Sie sind unregelmäßig, deshalb lerne sie auswendig.</p>
+  <table>
+    <tr><th>Person</th><th>sein</th><th>haben</th></tr>
+    <tr><td>ich</td><td>bin</td><td>habe</td></tr>
+    <tr><td>du</td><td>bist</td><td>hast</td></tr>
+    <tr><td>er / sie / es</td><td>ist</td><td>hat</td></tr>
+    <tr><td>wir</td><td>sind</td><td>haben</td></tr>
+    <tr><td>ihr</td><td>seid</td><td>habt</td></tr>
+    <tr><td>sie / Sie</td><td>sind</td><td>haben</td></tr>
+  </table>
+  <div class="rule"><b>Merksatz:</b> Die Verbform sagt dir, wer etwas tut. „Ich bin“ und „du bist“ unterscheiden sich nur im Anfang.</div>
+  <div class="tip"><b>Spielidee:</b> Stell dir vor, du stellst dich einer Gruppe vor: „Ich bin Anna. Ich habe einen Hund.“</div>`,
+  examples:['Ich bin müde.','Du hast einen Hund.','Wir sind Freunde.'],
+  ex:[
+    {t:'mc', q:'Ich ___ Lehrer.', o:['bin','bist','ist','sind'], a:0},
+    {t:'mc', q:'Du ___ müde.', o:['bin','bist','ist','seid'], a:1},
+    {t:'fill', q:'Wir ___ Freunde. (sein)', a:'sind'},
+    {t:'mc', q:'Er ___ einen Hund. (haben)', o:['habe','hast','hat','haben'], a:2},
+    {t:'order', q:'Bringe die Wörter in die richtige Reihenfolge.', words:['Ich','bin','aus','Deutschland','.'], a:'Ich bin aus Deutschland.'},
+    {t:'match', q:'Ordne jedem Pronomen die richtige Form von „sein“ zu.', pairs:[['ich','bin'],['du','bist'],['er','ist'],['wir','sind']]}
+  ]
+},
+{
+  id:'a1-2', level:'A1', title:'2. Verben im Präsens', goal:'Regelmäßige Endungen und Vokalwechsel',
+  explain:`
+  <p>Regelmäßige Verben bekommen im Präsens die Endungen <b>-e, -st, -t, -en, -t, -en</b>. Achtung: Bei manchen Verben ändert sich der Stammvokal in der du- und er-Form.</p>
+  <table>
+    <tr><th>Person</th><th>machen</th><th>fahren (e→ä)</th><th>sehen (e→ie)</th></tr>
+    <tr><td>ich</td><td>mache</td><td>fahre</td><td>sehe</td></tr>
+    <tr><td>du</td><td>machst</td><td>fährst</td><td>siehst</td></tr>
+    <tr><td>er / sie</td><td>macht</td><td>fährt</td><td>sieht</td></tr>
+    <tr><td>wir / sie</td><td>machen</td><td>fahren</td><td>sehen</td></tr>
+  </table>
+  <div class="rule"><b>Merke:</b> Die Vokalwechsel passieren nur bei du und er/sie/es, nie bei ich, wir oder sie.</div>
+  <div class="tip"><b>Trennbare Verben:</b> Bei <i>aufstehen</i> wandert die Vorsilbe ans Satzende: <i>Ich stehe um sieben auf.</i></div>`,
+  examples:['Du fährst nach Berlin.','Sie liest ein Buch.','Ich stehe um sieben auf.'],
+  ex:[
+    {t:'mc', q:'Du ___ nach Berlin. (fahren)', o:['fahre','fährst','fährt','fahren'], a:1},
+    {t:'mc', q:'Er ___ gern Pizza. (essen)', o:['isst','esst','essen','essst'], a:0},
+    {t:'fill', q:'Sie ___ ein Buch. (lesen)', a:'liest'},
+    {t:'order', q:'Bringe die Wörter in die richtige Reihenfolge.', words:['Er','schläft','heute','lange','.'], a:'Er schläft heute lange.'},
+    {t:'match', q:'Verb ↔ Form für „er / sie“', pairs:[['fahren','fährt'],['sehen','sieht'],['geben','gibt']]}
+  ]
+},
+{
+  id:'a1-3', level:'A1', title:'3. Artikel & Nomen (Nominativ)', goal:'der, die, das – ein, eine, kein',
+  explain:`
+  <p>Im Deutschen hat jedes Nomen ein Geschlecht: <b>der</b> (maskulin), <b>die</b> (feminin), <b>das</b> (neutrum). Die Pluralform ist immer <b>die</b>.</p>
+  <table>
+    <tr><th></th><th>maskulin</th><th>feminin</th><th>neutrum</th><th>Plural</th></tr>
+    <tr><td>bestimmt</td><td>der Tisch</td><td>die Lampe</td><td>das Haus</td><td>die Häuser</td></tr>
+    <tr><td>unbestimmt</td><td>ein Tisch</td><td>eine Lampe</td><td>ein Haus</td><td>– (Plural ohne ein)</td></tr>
+    <tr><td>verneint</td><td>kein Tisch</td><td>keine Lampe</td><td>kein Haus</td><td>keine Häuser</td></tr>
+  </table>
+  <div class="rule"><b>Merke:</b> Lerne jedes Nomen immer mit seinem Artikel. Ein Wort wie „der Tisch“ bleibt dir besser im Kopf als nur „Tisch“.</div>
+  <div class="tip"><b>Eselsbrücke:</b> Die Endungen -ung, -heit, -keit, -schaft sind immer feminin: <i>die Zeitung, die Freiheit</i>. Die Endungen -chen und -lein sind immer neutrum: <i>das Mädchen</i>.</div>`,
+  examples:['Der Tisch ist groß.','Die Lampe ist neu.','Das Haus ist alt.','Ein Hund ist lieb.'],
+  ex:[
+    {t:'mc', q:'___ Tisch ist groß.', o:['Der','Die','Das','Den'], a:0},
+    {t:'mc', q:'___ Lampe ist neu.', o:['Der','Die','Das','Dem'], a:1},
+    {t:'mc', q:'___ Hund ist lieb. (unbestimmt)', o:['Ein','Eine','Einen','Einer'], a:0},
+    {t:'fill', q:'Plural von „das Kind“: ___ Kinder (bestimmt)', a:'die', alt:['Die']},
+    {t:'match', q:'Artikel ↔ Geschlecht', pairs:[['der','maskulin'],['die','feminin'],['das','neutrum']]},
+    {t:'order', q:'Bringe die Wörter in die richtige Reihenfolge.', words:['Das','Haus','ist','sehr','alt','.'], a:'Das Haus ist sehr alt.'}
+  ]
+},
+{
+  id:'a1-4', level:'A1', title:'4. Akkusativ: Wen oder was?', goal:'den, die, das – einen, eine, keinen',
+  explain:`
+  <p>Im Akkusativ steht das Objekt, das eine Handlung direkt empfängt: <i>Ich sehe <b>den</b> Mann.</i> Nur der <b>maskulin</b> Artikel ändert sich. Feminin, neutrum und Plural bleiben gleich.</p>
+  <table>
+    <tr><th></th><th>Nominativ (Wer?)</th><th>Akkusativ (Wen/Was?)</th></tr>
+    <tr><td>maskulin</td><td>der / ein / kein</td><td><b>den / einen / keinen</b></td></tr>
+    <tr><td>feminin</td><td>die / eine / keine</td><td>die / eine / keine</td></tr>
+    <tr><td>neutrum</td><td>das / ein / kein</td><td>das / ein / kein</td></tr>
+    <tr><td>Plural</td><td>die / – / keine</td><td>die / – / keine</td></tr>
+  </table>
+  <div class="rule"><b>Merke:</b> Nur bei maskulinen Nomen ändert sich etwas: <i>der → den</i>, <i>ein → einen</i>, <i>kein → keinen</i>.</div>
+  <div class="tip"><b>Frage zum Erkennen:</b> Frage „Wen oder was?“. Die Antwort steht im Akkusativ.</div>`,
+  examples:['Ich sehe den Mann.','Sie kauft eine Tasche.','Wir haben keinen Hund.'],
+  ex:[
+    {t:'mc', q:'Ich sehe ___ Mann.', o:['den','der','dem','die'], a:0},
+    {t:'mc', q:'Sie kauft ___ Tasche.', o:['eine','einen','einer','ein'], a:0},
+    {t:'mc', q:'Wir haben ___ Auto. (verneint)', o:['keinen','keine','kein','keiner'], a:2},
+    {t:'fill', q:'Er liest ___ Zeitung. (mein, Akkusativ)', a:'meine'},
+    {t:'match', q:'Nominativ → Akkusativ (maskulin)', pairs:[['der','den'],['ein','einen'],['kein','keinen']]},
+    {t:'order', q:'Bringe die Wörter in die richtige Reihenfolge.', words:['Ich','suche','einen','Schlüssel','.'], a:'Ich suche einen Schlüssel.'}
+  ]
+},
+{
+  id:'a1-5', level:'A1', title:'5. Satzbau: Position 2 & Fragen', goal:'Das Verb steht immer an zweiter Stelle',
+  explain:`
+  <p>Im deutschen Hauptsatz steht das konjugierte Verb immer an <b>zweiter Stelle</b>. Das muss nicht das Subjekt sein.</p>
+  <table>
+    <tr><th>Position 1</th><th>Position 2</th><th>Rest</th></tr>
+    <tr><td>Ich</td><td><b>gehe</b></td><td>heute ins Kino.</td></tr>
+    <tr><td>Heute</td><td><b>gehe</b></td><td>ich ins Kino.</td></tr>
+    <tr><td>Ins Kino</td><td><b>gehe</b></td><td>ich heute.</td></tr>
+  </table>
+  <div class="rule"><b>Merke:</b> Position 1 darf jedes Satzglied sein. Das Verb bleibt aber auf Platz 2.</div>
+  <h3>Fragen</h3>
+  <p>Bei W-Fragen steht das Fragewort auf Position 1, das Verb auf Position 2: <i>Wann fährst du?</i> Bei Ja/Nein-Fragen steht das Verb auf Position 1: <i>Fährst du heute?</i></p>
+  <div class="tip"><b>Trennbare Verben:</b> <i>Ich stehe morgen um sieben auf.</i> Die Vorsilbe „auf“ steht am Satzende.</div>`,
+  examples:['Heute gehe ich ins Kino.','Wann fährst du nach Berlin?','Ich stehe um sieben auf.'],
+  ex:[
+    {t:'mc', q:'Heute ___ ich ins Kino.', o:['gehe','ich gehe','gehe ich','gehst'], a:0},
+    {t:'mc', q:'___ kommst du aus Spanien?', o:['Woher','Wohin','Wann','Wer'], a:0},
+    {t:'order', q:'Bringe die Wörter in die richtige Reihenfolge.', words:['Wann','fährst','du','nach','Berlin','?'], a:'Wann fährst du nach Berlin?'},
+    {t:'order', q:'Bringe die Wörter in die richtige Reihenfolge.', words:['Ich','stehe','morgen','um','sieben','auf','.'], a:'Ich stehe morgen um sieben auf.'},
+    {t:'fill', q:'Ich rufe dich später ___ (trennbar, Vorsilbe).', a:'an'},
+    {t:'match', q:'Fragewort ↔ Bedeutung', pairs:[['Wann?','Zeit'],['Wo?','Ort'],['Woher?','Herkunft']]}
+  ]
+},
+{
+  id:'a1-6', level:'A1', title:'6. Modalverben', goal:'können, müssen, wollen, möchten, dürfen, sollen',
+  explain:`
+  <p>Modalverben stehen auf Position 2. Der Infinitiv (das Grundverb) wandert ans <b>Satzende</b>. Diese Klammer ist typisch für Deutsch.</p>
+  <table>
+    <tr><th>Person</th><th>können</th><th>müssen</th><th>möchten</th></tr>
+    <tr><td>ich</td><td>kann</td><td>muss</td><td>möchte</td></tr>
+    <tr><td>du</td><td>kannst</td><td>musst</td><td>möchtest</td></tr>
+    <tr><td>er / sie</td><td>kann</td><td>muss</td><td>möchte</td></tr>
+    <tr><td>wir / sie</td><td>können</td><td>müssen</td><td>möchten</td></tr>
+  </table>
+  <div class="rule"><b>Satzklammer:</b> <i>Ich kann morgen kommen.</i> Modalverb auf Position 2, Infinitiv am Ende.</div>
+  <div class="tip"><b>Unterschied:</b> <i>dürfen</i> = erlaubt sein, <i>sollen</i> = Empfehlung oder Auftrag, <i>möchten</i> = höfliche Form von „wollen“.</div>`,
+  examples:['Ich kann morgen kommen.','Du darfst hier nicht rauchen.','Ich möchte einen Kaffee.'],
+  ex:[
+    {t:'mc', q:'Ich ___ gut Deutsch sprechen.', o:['kann','kannst','können','könnt'], a:0},
+    {t:'mc', q:'Du ___ hier nicht rauchen. (Verbot)', o:['darfst','darf','dürfen','sollst'], a:0},
+    {t:'fill', q:'Wir ___ heute einkaufen. (müssen)', a:'müssen'},
+    {t:'mc', q:'Richtige Satzklammer:', o:['Ich kann morgen kommen.','Ich komme morgen kann.','Ich kann morgen komme.','Ich morgen kann kommen.'], a:0},
+    {t:'order', q:'Bringe die Wörter in die richtige Reihenfolge.', words:['Ich','möchte','gern','einen','Kaffee','.'], a:'Ich möchte gern einen Kaffee.'},
+    {t:'order', q:'Bringe die Wörter in die richtige Reihenfolge.', words:['Kannst','du','mir','bitte','helfen','?'], a:'Kannst du mir bitte helfen?'}
+  ]
+},
+{
+  id:'a1-7', level:'A1', title:'7. Perfekt', goal:'Über Vergangenes sprechen: haben oder sein + Partizip',
+  explain:`
+  <p>Im Alltag erzählt man Vergangenes meistens im <b>Perfekt</b>: Form von <i>haben</i> oder <i>sein</i> + Partizip II. Das Partizip steht am Satzende.</p>
+  <table>
+    <tr><th>Infinitiv</th><th>Partizip II</th><th>Beispiel</th></tr>
+    <tr><td>machen</td><td>gemacht</td><td>Ich habe viel gemacht.</td></tr>
+    <tr><td>kaufen</td><td>gekauft</td><td>Sie hat ein Buch gekauft.</td></tr>
+    <tr><td>fahren</td><td>gefahren</td><td>Wir sind nach Berlin gefahren.</td></tr>
+    <tr><td>gehen</td><td>gegangen</td><td>Er ist nach Hause gegangen.</td></tr>
+    <tr><td>essen</td><td>gegessen</td><td>Ich habe Pizza gegessen.</td></tr>
+  </table>
+  <div class="rule"><b>Faustregel:</b> Mit <i>sein</i> bildet man das Perfekt bei Bewegung (gehen, fahren, kommen) und bei Zustandsänderung (werden, sein, bleiben). Alles andere bekommt <i>haben</i>.</div>
+  <div class="tip"><b>Typisch:</b> Regelmäßige Verben bilden das Partizip mit <b>ge-…-t</b> (gemacht). Unregelmäßige mit <b>ge-…-en</b> (gegangen).</div>`,
+  examples:['Ich habe gestern Pizza gegessen.','Er ist nach Hause gegangen.','Wir haben viel gelernt.'],
+  ex:[
+    {t:'mc', q:'Ich ___ gestern Pizza ___. (essen)', o:['habe … gegessen','bin … gegessen','habe … essen','hab … gegessen'], a:0},
+    {t:'mc', q:'Er ist nach Hause ___. (gehen)', o:['gegangen','gegeht','gegehen','gehen'], a:0},
+    {t:'fill', q:'Wir haben viel ___. (lernen)', a:'gelernt'},
+    {t:'mc', q:'Sie ist ___. (kommen)', o:['gekommen','kommen','gekomen','kam'], a:0},
+    {t:'order', q:'Bringe die Wörter in die richtige Reihenfolge.', words:['Gestern','habe','ich','einen','Film','gesehen','.'], a:'Gestern habe ich einen Film gesehen.'},
+    {t:'match', q:'Infinitiv ↔ Partizip II', pairs:[['machen','gemacht'],['kaufen','gekauft'],['fahren','gefahren']]}
+  ]
+},
+{
+  id:'a1-8', level:'A1', title:'8. Dativ: Wem?', goal:'mir, dir, dem, der + Präpositionen mit Dativ',
+  explain:`
+  <p>Der Dativ beantwortet die Frage <b>„Wem?“</b>: <i>Ich helfe <b>meiner Mutter</b>.</i> Viele Personalpronomen haben eine eigene Dativform.</p>
+  <table>
+    <tr><th>Person</th><th>ich</th><th>du</th><th>er</th><th>sie</th><th>wir</th><th>ihr</th><th>sie</th></tr>
+    <tr><td>Dativ</td><td>mir</td><td>dir</td><td>ihm</td><td>ihr</td><td>uns</td><td>euch</td><td>ihnen</td></tr>
+  </table>
+  <table>
+    <tr><th></th><th>maskulin</th><th>feminin</th><th>neutrum</th><th>Plural</th></tr>
+    <tr><td>Dativ</td><td>dem</td><td>der</td><td>dem</td><td>den (+ n)</td></tr>
+  </table>
+  <div class="rule"><b>Präpositionen mit Dativ (immer!):</b> <i>mit, bei, nach, von, aus, zu, seit</i>. Beispiel: <i>mit dem Bus, bei meiner Familie, aus der Stadt</i>.</div>
+  <div class="tip"><b>Tipp:</b> Im Plural bekommt das Nomen im Dativ ein -n: <i>mit den Kindern</i>, <i>bei meinen Eltern</i>.</div>`,
+  examples:['Ich helfe meiner Mutter.','Er gibt mir ein Buch.','Wir fahren mit dem Bus.'],
+  ex:[
+    {t:'mc', q:'Ich helfe ___. (meine Mutter)', o:['meiner Mutter','meine Mutter','meinen Mutter','meinem Mutter'], a:0},
+    {t:'mc', q:'Er gibt ___ ein Buch. (ich)', o:['mir','mich','ich','mein'], a:0},
+    {t:'mc', q:'Wir fahren mit ___ Bus.', o:['dem','den','der','die'], a:0},
+    {t:'mc', q:'Sie wohnt bei ___ Eltern.', o:['ihren','ihre','ihrem','ihr'], a:0},
+    {t:'fill', q:'Das Geschenk ist von ___. (er)', a:'ihm'},
+    {t:'match', q:'Präposition ↔ Kasus', pairs:[['mit','Dativ'],['bei','Dativ'],['nach','Dativ']]}
+  ]
+},
+{
+  id:'test-a1', level:'A1', type:'test', title:'★ A1-Abschlusstest', goal:'Zeige, dass du A1 beherrschst. Zufällige Aufgaben aus allen A1-Lektionen.',
+  explain:`<p>Dieser Test mischt Aufgaben aus allen A1-Lektionen. Mindestens 70 % schaltest du die B1-Stufe frei.</p>`,
+  examples:[], ex:[]
+},
+{
+  id:'b1-1', level:'B1', title:'9. Präteritum', goal:'war, hatte, ging, konnte – Erzählen in der Vergangenheit',
+  explain:`
+  <p>Das <b>Präteritum</b> benutzt man in Geschichten, Berichten und in der geschriebenen Sprache. Bei <i>sein</i>, <i>haben</i> und den Modalverben ist es besonders wichtig.</p>
+  <table>
+    <tr><th>Verb</th><th>ich</th><th>er / sie</th><th>wir</th></tr>
+    <tr><td>sein</td><td>war</td><td>war</td><td>waren</td></tr>
+    <tr><td>haben</td><td>hatte</td><td>hatte</td><td>hatten</td></tr>
+    <tr><td>gehen (unregelmäßig)</td><td>ging</td><td>ging</td><td>gingen</td></tr>
+    <tr><td>können</td><td>konnte</td><td>konnte</td><td>konnten</td></tr>
+  </table>
+  <div class="rule"><b>Regelmäßige Verben:</b> Stamm + -te + Endung: <i>ich lernte, du lerntest, er lernte</i>. Unregelmäßige ändern den Stamm: <i>gehen → ging</i>, <i>kommen → kam</i>.</div>
+  <div class="tip"><b>Wann?</b> Sprichst du von einem Erlebnis am Abend? Dann Perfekt. In Erzählungen oder Nachrichten: Präteritum.</div>`,
+  examples:['Gestern war ich sehr müde.','Früher hatte er viel Zeit.','Ich ging nach Hause.'],
+  ex:[
+    {t:'mc', q:'Gestern ___ ich sehr müde. (sein)', o:['war','bin','hatte','ging'], a:0},
+    {t:'mc', q:'Früher ___ er viel Zeit. (haben)', o:['hatte','hat','hatten','habe'], a:0},
+    {t:'fill', q:'Ich ___ (gehen) nach Hause.', a:'ging'},
+    {t:'mc', q:'Ich ___ nicht kommen. (können, Präteritum)', o:['konnte','könnte','kann','konnten'], a:0},
+    {t:'order', q:'Bringe die Wörter in die richtige Reihenfolge.', words:['Am','Montag','war','er','krank','.'], a:'Am Montag war er krank.'},
+    {t:'match', q:'Infinitiv ↔ Präteritum', pairs:[['gehen','ging'],['kommen','kam'],['sein','war']]}
+  ]
+},
+{
+  id:'b1-2', level:'B1', title:'10. Nebensätze (weil, dass, wenn, obwohl)', goal:'Das Verb wandert ans Ende',
+  explain:`
+  <p>Ein Nebensatz wird mit einer Konjunktion eingeleitet. Das konjugierte Verb steht dann am <b>Ende</b> des Nebensatzes.</p>
+  <table>
+    <tr><th>Konjunktion</th><th>Bedeutung</th><th>Beispiel</th></tr>
+    <tr><td>weil</td><td>weil (Grund)</td><td>Ich bleibe zu Hause, weil ich krank <b>bin</b>.</td></tr>
+    <tr><td>dass</td><td>dass (Aussage)</td><td>Er sagt, dass er morgen <b>kommt</b>.</td></tr>
+    <tr><td>wenn</td><td>wenn (Bedingung)</td><td>Wenn es regnet, bleiben wir <b>drinnen</b>.</td></tr>
+    <tr><td>obwohl</td><td>obwohl (Gegensatz)</td><td>Obwohl es kalt <b>ist</b>, gehen wir spazieren.</td></tr>
+  </table>
+  <div class="rule"><b>Merke:</b> Der Nebensatz steht durch ein Komma getrennt. Wenn der Nebensatz vorne steht, folgt im Hauptsatz das Verb direkt nach dem Komma.</div>`,
+  examples:['Ich bleibe zu Hause, weil ich krank bin.','Er sagt, dass er morgen kommt.','Obwohl es kalt ist, gehen wir spazieren.'],
+  ex:[
+    {t:'mc', q:'Ich bleibe zu Hause, ___ ich krank bin.', o:['weil','denn','aber','und'], a:0},
+    {t:'mc', q:'Er sagt, ___ er morgen kommt.', o:['dass','das','weil','wenn'], a:0},
+    {t:'mc', q:'___ es regnet, bleiben wir drinnen.', o:['Wenn','Dass','Obwohl','Weil'], a:0},
+    {t:'order', q:'Bringe die Wörter in die richtige Reihenfolge.', words:['Ich','bleibe','zu','Hause','weil','ich','krank','bin','.'], a:'Ich bleibe zu Hause, weil ich krank bin.'},
+    {t:'fill', q:'Obwohl es kalt ist, ___ (gehen) wir spazieren.', a:'gehen'},
+    {t:'match', q:'Konjunktion ↔ Bedeutung', pairs:[['weil','Grund'],['dass','Aussage'],['obwohl','Gegensatz']]}
+  ]
+},
+{
+  id:'b1-3', level:'B1', title:'11. Konjunktiv II (würde, hätte, wäre)', goal:'Wünsche, Höflichkeit und Irreales',
+  explain:`
+  <p>Der <b>Konjunktiv II</b> drückt Wünsche, höfliche Bitten und Unwirkliches aus. Für viele Verben nutzt man <i>würde</i> + Infinitiv. Bei <i>sein</i>, <i>haben</i> und den Modalverben gibt es eigene Formen.</p>
+  <table>
+    <tr><th>Verb</th><th>Konjunktiv II</th><th>Beispiel</th></tr>
+    <tr><td>sein</td><td>wäre</td><td>Ich wäre gern Pilot.</td></tr>
+    <tr><td>haben</td><td>hätte</td><td>Ich hätte gern mehr Zeit.</td></tr>
+    <tr><td>können</td><td>könnte</td><td>Könntest du mir helfen?</td></tr>
+    <tr><td>fahren</td><td>würde fahren</td><td>Ich würde gern nach Japan fahren.</td></tr>
+  </table>
+  <div class="rule"><b>Merke:</b> <i>würde</i> steht auf Position 2, der Infinitiv ans Ende. Bei <i>wäre</i>, <i>hätte</i>, <i>könnte</i> steht die Form selbst auf Position 2.</div>
+  <div class="tip"><b>Typischer Satz:</b> <i>Wenn ich reich wäre, würde ich reisen.</i> Der Nebensatz (wenn …) mit Konjunktiv und der Hauptsatz mit <i>würde</i>.</div>`,
+  examples:['Ich würde gern nach Japan fahren.','Ich hätte gern mehr Zeit.','Wenn ich reich wäre, würde ich reisen.'],
+  ex:[
+    {t:'mc', q:'Richtiger Satz für „Ich würde gern nach Japan fahren“:', o:['Ich würde gern nach Japan fahren.','Ich würde gern nach Japan fahre.','Ich fahre würde gern nach Japan.','Ich würde gern nach Japan fährt.'], a:0},
+    {t:'mc', q:'Wenn ich Zeit ___, käme ich mit. (haben)', o:['hätte','habe','hat','hätten'], a:0},
+    {t:'fill', q:'Könntest du mir bitte ___? (helfen)', a:'helfen'},
+    {t:'mc', q:'Ich ___ gern mehr Urlaub.', o:['hätte','hatte','habe','hat'], a:0},
+    {t:'order', q:'Bringe die Wörter in die richtige Reihenfolge.', words:['Wenn','ich','reich','wäre',',','würde','ich','reisen','.'], a:'Wenn ich reich wäre, würde ich reisen.'},
+    {t:'match', q:'Verb ↔ Konjunktiv II', pairs:[['sein','wäre'],['haben','hätte'],['können','könnte']]}
+  ]
+},
+{
+  id:'b1-4', level:'B1', title:'12. Wechselpräpositionen', goal:'Wo? (Dativ) oder Wohin? (Akkusativ)',
+  explain:`
+  <p>Die Wechselpräpositionen <i>in, an, auf, über, unter, vor, hinter, neben, zwischen</i> stehen mit <b>Dativ</b>, wenn man fragt <b>„Wo?“</b> (Ruhe). Sie stehen mit <b>Akkusativ</b>, wenn man fragt <b>„Wohin?“</b> (Bewegung).</p>
+  <table>
+    <tr><th></th><th>Wo? (Dativ)</th><th>Wohin? (Akkusativ)</th></tr>
+    <tr><td>auf</td><td>Das Buch liegt <b>auf dem</b> Tisch.</td><td>Ich lege es <b>auf den</b> Tisch.</td></tr>
+    <tr><td>in</td><td>Wir sind <b>im</b> Kino.</td><td>Wir gehen <b>ins</b> Kino.</td></tr>
+    <tr><td>an</td><td>Das Bild hängt <b>an der</b> Wand.</td><td>Ich hänge es <b>an die</b> Wand.</td></tr>
+  </table>
+  <div class="rule"><b>Merke:</b> Bewegung = Akkusativ. Ruhe = Dativ. Die Frage „Wo?“ oder „Wohin?“ entscheidet.</div>
+  <div class="tip"><b>Verschmelzungen:</b> in + dem = im, in + das = ins, an + dem = am, zu + dem = zum, zu + der = zur.</div>`,
+  examples:['Das Buch liegt auf dem Tisch.','Ich lege es auf den Tisch.','Wir gehen ins Kino.'],
+  ex:[
+    {t:'mc', q:'Das Buch liegt ___ Tisch. (Wo?)', o:['auf dem','auf den','auf die','auf das'], a:0},
+    {t:'mc', q:'Ich lege das Buch ___ Tisch. (Wohin?)', o:['auf den','auf dem','auf die','auf das'], a:0},
+    {t:'mc', q:'Wir gehen ___ Kino. (Wohin?)', o:['ins','im','in dem','in den'], a:0},
+    {t:'fill', q:'Das Bild hängt ___ Wand. (Wo? an + der)', a:'an der'},
+    {t:'order', q:'Bringe die Wörter in die richtige Reihenfolge.', words:['Ich','stelle','die','Flasche','in','den','Kühlschrank','.'], a:'Ich stelle die Flasche in den Kühlschrank.'}
+  ]
+},
+{
+  id:'b1-5', level:'B1', title:'13. Relativsätze', goal:'Mehr über Personen und Dinge erzählen',
+  explain:`
+  <p>Ein Relativsatz beschreibt ein Nomen genauer. Das Relativpronomen richtet sich nach dem <b>Geschlecht und der Zahl</b> des Bezugswortes, der <b>Kasus</b> bestimmt sich nach dem Verb im Relativsatz.</p>
+  <table>
+    <tr><th></th><th>maskulin</th><th>feminin</th><th>neutrum</th><th>Plural</th></tr>
+    <tr><td>Nominativ</td><td>der</td><td>die</td><td>das</td><td>die</td></tr>
+    <tr><td>Akkusativ</td><td>den</td><td>die</td><td>das</td><td>die</td></tr>
+    <tr><td>Dativ</td><td>dem</td><td>der</td><td>dem</td><td>denen</td></tr>
+  </table>
+  <div class="rule"><b>Beispiel:</b> <i>Der Mann, <b>der</b> dort steht, ist mein Onkel.</i> (Nominativ: der Mann steht). <i>Die Frau, <b>der</b> ich helfe, ist nett.</i> (Dativ: ich helfe ihr).</div>
+  <div class="tip"><b>Tipp:</b> Bevor du das Relativpronomen wählst, prüfe das Verb im Nebensatz: „steht“ → Nominativ. „helfe“ → Dativ.</div>`,
+  examples:['Der Mann, der dort steht, ist mein Onkel.','Das ist das Buch, das ich gelesen habe.','Die Frau, der ich helfe, ist nett.'],
+  ex:[
+    {t:'mc', q:'Der Mann, ___ dort steht, ist mein Onkel.', o:['der','den','dem','die'], a:0},
+    {t:'mc', q:'Das ist das Buch, ___ ich gelesen habe.', o:['das','den','dem','die'], a:0},
+    {t:'mc', q:'Die Frau, ___ ich helfe, ist nett.', o:['der','die','den','dem'], a:0},
+    {t:'fill', q:'Die Stadt, in ___ ich wohne, ist schön.', a:'der'},
+    {t:'order', q:'Bringe die Wörter in die richtige Reihenfolge.', words:['Das','ist','die','Frau','die','Deutsch','spricht','.'], a:'Das ist die Frau, die Deutsch spricht.'}
+  ]
+},
+{
+  id:'b1-6', level:'B1', title:'14. Passiv (Präsens)', goal:'Vorgänge beschreiben, ohne die handelnde Person zu nennen',
+  explain:`
+  <p>Im Passiv steht im Mittelpunkt, <b>was passiert</b>, nicht wer es tut. Gebildet wird es mit <b>werden</b> + Partizip II. Das Partizip steht am Satzende.</p>
+  <table>
+    <tr><th>Aktiv</th><th>Passiv</th></tr>
+    <tr><td>Der Bäcker backt das Brot.</td><td>Das Brot <b>wird</b> gebacken.</td></tr>
+    <tr><td>Man putzt das Fenster.</td><td>Das Fenster <b>wird</b> geputzt.</td></tr>
+    <tr><td>Wir schreiben die Briefe.</td><td>Die Briefe <b>werden</b> geschrieben.</td></tr>
+  </table>
+  <div class="rule"><b>Merke:</b> <i>werden</i> wird konjugiert (wird, werden), das Partizip II bleibt gleich und steht am Ende.</div>
+  <div class="tip"><b>Wichtig:</b> Die handelnde Person fällt oft weg. Wenn du sie nennen willst, nimmst du <i>von</i> + Dativ: <i>Das Brot wird vom Bäcker gebacken.</i></div>`,
+  examples:['Das Brot wird jeden Morgen gebacken.','Das Fenster wird jeden Tag geputzt.','Die Briefe werden heute geschrieben.'],
+  ex:[
+    {t:'mc', q:'Das Brot ___ jeden Morgen ___. (backen)', o:['wird … gebacken','ist … gebacken','wird … backt','wurde … kochen'], a:0},
+    {t:'mc', q:'Die Briefe ___ heute ___. (schreiben)', o:['werden … geschrieben','werden … schreiben','sind … geschrieben','wird … geschrieben'], a:0},
+    {t:'fill', q:'Das Auto wird ___. (reparieren, Partizip)', a:'repariert'},
+    {t:'order', q:'Bringe die Wörter in die richtige Reihenfolge.', words:['Das','Fenster','wird','jeden','Tag','geputzt','.'], a:'Das Fenster wird jeden Tag geputzt.'},
+    {t:'match', q:'Satz ↔ Stimme', pairs:[['Ich mache das.','aktiv'],['Das wird gemacht.','passiv']]}
+  ]
+},
+{
+  id:'test-b1', level:'B1', type:'test', title:'★ B1-Abschlusstest', goal:'Der große Test für B1. Zufällige Aufgaben aus allen B1-Lektionen.',
+  explain:`<p>Dieser Test mischt Aufgaben aus allen B1-Lektionen.</p>`,
+  examples:[], ex:[]
+}
+];
+
+/* Reihenfolge ist die Freischalt-Reihenfolge: A1 → A1-Test → B1 → B1-Test */
+const LESSONS = CONTENT;
+
+/* =====================================================================
+   ÜBUNGS-ENGINE
+   ===================================================================== */
+// Gibt die Übungen einer Lektion zurück. Tests mischen Aufgaben aller Lektionen ihrer Stufe.
+function getEx(L){
+  if(L.type === 'test'){
+    const pool = LESSONS.filter(x => x.level === L.level && x.type !== 'test').flatMap(x => x.ex);
+    return shuffle(pool).slice(0, 15);
+  }
+  return L.ex;
+}
+
+function renderEx(list, host, onFinish){
+  host.innerHTML = '';
+  let score = 0, n = 0;
+  list.forEach((e, i)=>{
+    const d = document.createElement('div');
+    d.className = 'ex';
+    host.appendChild(d);
+    const fb = document.createElement('div');
+    fb.className = 'fb';
+
+    const finish = (ok, txt)=>{
+      if(d.dataset.done) return;
+      d.dataset.done = 1; n++;
+      if(ok){ score++; addXP(10); }
+      fb.className = 'fb ' + (ok ? 'ok' : 'bad');
+      fb.textContent = (ok ? '✔ Richtig! ' : '✘ Leider nicht. ') + txt;
+      if(n === list.length) onFinish(score, list.length);
+    };
+
+    if(e.t === 'mc'){
+      d.innerHTML = `<p><b>${i+1}.</b> ${e.q}</p><div class="opts">${e.o.map((o,j)=>`<button data-j="${j}">${o}</button>`).join('')}</div>`;
+      d.querySelectorAll('.opts button').forEach(b => b.onclick = ()=>{
+        if(d.dataset.done) return;
+        const j = +b.dataset.j;
+        d.querySelectorAll('.opts button').forEach(x => x.disabled = true);
+        b.classList.add(j === e.a ? 'ok' : 'bad');
+        if(j !== e.a) d.querySelectorAll('.opts button')[e.a].classList.add('ok');
+        finish(j === e.a, e.h || ('Richtig: ' + e.o[e.a]));
+      });
+    }
+    else if(e.t === 'fill'){
+      d.innerHTML = `<p><b>${i+1}.</b> ${e.q}</p><input type="text" autocomplete="off" placeholder="Antwort eingeben"> <button class="primary chk">Prüfen</button>`;
+      const inp = d.querySelector('input');
+      const go = ()=>{
+        if(!inp.value.trim() || d.dataset.done) return;
+        const v = norm(inp.value);
+        const ok = v === norm(e.a) || (e.alt || []).some(x => norm(x) === v);
+        inp.disabled = true;
+        finish(ok, e.h || ('Richtig: „' + e.a + '“'));
+      };
+      d.querySelector('.chk').onclick = go;
+      inp.onkeydown = ev => { if(ev.key === 'Enter') go(); };
+    }
+    else if(e.t === 'order'){
+      d.innerHTML = `<p><b>${i+1}.</b> ${e.q}</p>`;
+      const ans = document.createElement('div'); ans.className = 'answer';
+      const bank = document.createElement('div'); bank.className = 'bank';
+      const chk = document.createElement('button'); chk.className = 'primary'; chk.textContent = 'Prüfen';
+      const rst = document.createElement('button'); rst.className = 'secondary'; rst.textContent = 'Neu';
+      rst.style.marginLeft = '8px';
+      d.append(ans, bank, chk, rst);
+      const pool = e.words.map((w, k) => ({w, k}));
+      const shuffled = shuffle(pool);
+      let chosen = [];
+      const draw = ()=>{
+        ans.innerHTML = ''; bank.innerHTML = '';
+        chosen.forEach((c, idx)=>{
+          const b = btn(c.w);
+          b.onclick = ()=>{ if(d.dataset.done) return; chosen.splice(idx, 1); draw(); };
+          ans.appendChild(b);
+        });
+        shuffled.filter(c => !chosen.includes(c)).forEach(c=>{
+          const b = btn(c.w);
+          b.onclick = ()=>{ if(d.dataset.done) return; chosen.push(c); draw(); };
+          bank.appendChild(b);
+        });
+      };
+      rst.onclick = ()=>{ if(d.dataset.done) return; chosen = []; draw(); };
+      chk.onclick = ()=>{
+        if(d.dataset.done) return;
+        const ok = norm(chosen.map(c => c.w).join(' ')) === norm(e.a);
+        finish(ok, 'Richtig: „' + e.a + '“');
+      };
+      draw();
+    }
+    else if(e.t === 'match'){
+      d.innerHTML = `<p><b>${i+1}.</b> ${e.q}</p>`;
+      const grid = document.createElement('div'); grid.className = 'match';
+      const colL = document.createElement('div'), colR = document.createElement('div');
+      const right = shuffle(e.pairs.map(p => p[1]));
+      let selL = null, mistakes = 0, matched = 0;
+      e.pairs.forEach(p=>{
+        const b = btn(p[0], 'chip');
+        b.onclick = ()=>{
+          if(d.dataset.done || b.disabled) return;
+          colL.querySelectorAll('.sel').forEach(x => x.classList.remove('sel'));
+          b.classList.add('sel'); selL = b;
+        };
+        b.dataset.left = p[0];
+        colL.appendChild(b);
+      });
+      right.forEach(r=>{
+        const b = btn(r, 'chip');
+        b.onclick = ()=>{
+          if(d.dataset.done || b.disabled || !selL) return;
+          const correct = e.pairs.some(p => p[0] === selL.dataset.left && p[1] === r);
+          if(correct){
+            selL.disabled = true; selL.classList.remove('sel'); selL.classList.add('ok');
+            b.disabled = true; b.classList.add('ok');
+            selL = null; matched++;
+            if(matched === e.pairs.length){
+              finish(mistakes === 0, mistakes === 0 ? 'Alle Paare auf Anhieb richtig!' : 'Alle Paare gefunden, mit ' + mistakes + ' Fehler(n).');
+            }
+          } else {
+            mistakes++;
+            b.classList.add('bad');
+            setTimeout(()=> b.classList.remove('bad'), 600);
+          }
+        };
+        colR.appendChild(b);
+      });
+      grid.append(colL, colR);
+      d.appendChild(grid);
+    }
+    d.appendChild(fb);
+  });
+}
+
+/* =====================================================================
+   SEITEN
+   ===================================================================== */
+const nav = document.getElementById('nav');
+const main = document.getElementById('main');
+
+function buildNav(active){
+  let html = `<div class="card">
+    <button class="nav-btn ${active==='home'?'active':''}" data-go="home"><span>🏠 Start</span></button>
+  </div>`;
+  let lastLevel = null;
+  LESSONS.forEach((L, i)=>{
+    if(L.level !== lastLevel){
+      html += `<div class="level-h">${L.level === 'A1' ? 'Stufe A1 – Grundlagen' : 'Stufe B1 – Selbstständig'}</div>`;
+      lastLevel = L.level;
+    }
+    const open = isUnlocked(i);
+    const pct = progress.done[L.id];
+    const label = L.type === 'test' ? L.title : `${L.title}`;
+    html += `<button class="nav-btn ${active===i?'active':''}" data-go="${i}" ${open?'':'disabled'}>
+      <span>${open ? '' : '🔒 '}${label}</span>
+      <span class="stars">${pct!==undefined ? stars(pct) : ''}</span>
+    </button>`;
+  });
+  nav.innerHTML = html;
+}
+
+function showHome(){
+  buildNav('home');
+  const done = Object.keys(progress.done).length;
+  const next = LESSONS.findIndex((L, i)=> isUnlocked(i) && !((progress.done[L.id]||0) >= PASS));
+  const allStars = Object.values(progress.done).reduce((s,p)=>s+((stars(p).match(/⭐/g)||[]).length),0);
+  main.innerHTML = `
+    <div class="card">
+      <h2>Willkommen! 👋</h2>
+      <p>Ich bin dein Deutschlehrer. Wir arbeiten Schritt für Schritt: erst eine kurze Regel verstehen, dann mit Spielaufgaben üben. Jede Stufe schaltest du frei, indem du die vorherige Lektion mit mindestens ${PASS} % schaffst.</p>
+      <div class="stats">
+        <div class="stat">Lektionen abgeschlossen<br><b>${done}/${LESSONS.length}</b></div>
+        <div class="stat">Sterne gesamt<br><b>⭐ ${allStars}</b></div>
+        <div class="stat">Punkte<br><b>${progress.xp||0}</b></div>
+      </div>
+      <p class="muted">Hinweis: Diese Seite trainiert Grammatik. Für die Prüfung brauchst du zusätzlich Hören, Lesen, Schreiben und Sprechen.</p>
+    </div>
+    <div class="card">
+      <h3>Weiter geht’s</h3>
+      ${next >= 0 ? `<p>Als Nächstes: <b>${LESSONS[next].title}</b> – ${LESSONS[next].goal}</p>
+        <button class="primary" data-go="${next}">Lektion starten</button>`
+        : `<p>🎉 Alles geschafft! Du hast alle Lektionen abgeschlossen.</p>`}
+    </div>
+    <div class="card">
+      <h3>Fortschritt zurücksetzen</h3>
+      <p class="muted">Löscht alle Ergebnisse und sperrt wieder alles außer der ersten Lektion.</p>
+      <button class="secondary" id="reset">Zurücksetzen</button>
+    </div>`;
+  document.getElementById('reset').onclick = ()=>{
+    if(confirm('Wirklich den gesamten Fortschritt löschen?')){
+      progress = {done:{}, xp:0}; save(); showHome();
+    }
+  };
+}
+
+function showLesson(i){
+  if(!isUnlocked(i)){
+    buildNav(null);
+    const prev = LESSONS[i-1];
+    main.innerHTML = `<div class="card lockbox">
+      <h2>🔒 Noch gesperrt</h2>
+      <p>Diese Lektion schaltest du frei, wenn du <b>${prev.title}</b> mit mindestens ${PASS} % geschafft hast.</p>
+      <button class="primary" data-go="${i-1}">Zur vorherigen Lektion</button>
+    </div>`;
+    return;
+  }
+  buildNav(i);
+  const L = LESSONS[i];
+  const ex = getEx(L);
+
+  main.innerHTML = `
+    <div class="card">
+      <h2>${L.title}</h2>
+      <p class="muted">${L.goal}</p>
+      ${L.explain}
+      ${L.examples && L.examples.length ? `<h3>Zum Anhören</h3>${L.examples.map(s=>`<p>${s}<button class="sound" data-say="${s}">🔊</button></p>`).join('')}` : ''}
+    </div>
+    <div class="card">
+      <h3>${L.type === 'test' ? 'Test' : 'Übungen'}</h3>
+      <div id="exh"></div>
+    </div>`;
+
+  renderEx(ex, document.getElementById('exh'), (s, t)=>{
+    const pct = Math.round(s / t * 100);
+    progress.done[L.id] = Math.max(progress.done[L.id] || 0, pct);
+    save();
+    buildNav(i);
+    const next = LESSONS[i+1];
+    const passed = pct >= PASS;
+    document.getElementById('exh').insertAdjacentHTML('beforeend', `
+      <div class="rule"><b>Ergebnis: ${s} von ${t} richtig (${pct} %)</b> ${stars(pct)}<br>
+      ${passed
+        ? (next ? `🔓 Du hast <b>${next.title}</b> freigeschaltet!` : '🎉 Super, du hast alle Stufen geschafft!')
+        : `Noch nicht ganz. Du brauchst ${PASS} %, um weiterzukommen. Wiederhole kurz und versuch es nochmal.`}
+      </div>
+      <button class="secondary" data-go="${i}">Nochmal üben</button>
+      ${passed && next ? `<button class="primary" data-go="${i+1}" style="margin-left:8px">Weiter</button>` : ''}`);
+  });
+}
+
+/* ---------- EVENTS ---------- */
+document.body.addEventListener('click', e=>{
+  const go = e.target.closest('[data-go]');
+  if(go && !go.disabled){
+    const g = go.dataset.go;
+    if(g === 'home') showHome();
+    else showLesson(+g);
+    window.scrollTo(0, 0);
+  }
+  const s = e.target.closest('[data-say]');
+  if(s) say(s.dataset.say);
+});
+
+showHome();
+</script>
+</body>
+</html>
